@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Tester</title>
+<style>
+  /* (same as the original provided CSS – no changes needed) */
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2333;
+    --surface3: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #7d8590;
+    --text-dim: #484f58;
+    --accent: #58a6ff;
+    --accent-dim: #1f4068;
+    --green: #3fb950;
+    --green-dim: #1a3a26;
+    --yellow: #d29922;
+    --red: #f85149;
+    --red-dim: #3d1a1a;
+    --orange: #e3b341;
+    --purple: #bc8cff;
+    --cyan: #39d0d8;
+
+    --method-get: #3fb950;
+    --method-post: #58a6ff;
+    --method-put: #d29922;
+    --method-patch: #bc8cff;
+    --method-delete: #f85149;
+    --method-head: #39d0d8;
+    --method-options: #e3b341;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .logo {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo-icon {
+    width: 28px; height: 28px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .ws-status {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .ws-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: background 0.3s;
+  }
+  .ws-dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 0;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .panel:nth-child(2) { border-right: none; }
+  .panel:nth-child(3) { border-bottom: none; }
+  .panel:nth-child(4) { border-right: none; border-bottom: none; }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .panel-header .icon { opacity: 0.7; }
+  .panel-header-actions { margin-left: auto; display: flex; gap: 6px; }
+
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .url-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .method-select {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    outline: none;
+    min-width: 110px;
+  }
+  .method-select:focus { border-color: var(--accent); }
+
+  .url-input {
+    flex: 1;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .url-input:focus { border-color: var(--accent); }
+
+  .send-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .send-btn:hover { opacity: 0.85; }
+  .send-btn:active { transform: scale(0.97); }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-count {
+    background: var(--surface3);
+    color: var(--text-muted);
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 10px;
+  }
+  .tab.active .tab-count { background: var(--accent-dim); color: var(--accent); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .kv-table { width: 100%; border-collapse: collapse; }
+  .kv-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    padding: 4px 8px 8px;
+  }
+  .kv-row { display: contents; }
+  .kv-row td { padding: 3px 4px; }
+  .kv-row td:first-child { padding-left: 0; width: 32px; }
+  .kv-row td:last-child { padding-right: 0; width: 32px; }
+
+  .kv-check { accent-color: var(--accent); cursor: pointer; width: 15px; height: 15px; }
+  .kv-input {
+    width: 100%;
+    background: var(--surface3);
+    border: 1px solid transparent;
+    color: var(--text);
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .kv-input:focus { border-color: var(--border); background: var(--surface2); }
+  .kv-input::placeholder { color: var(--text-dim); font-style: italic; }
+  .kv-del {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .kv-del:hover { color: var(--red); background: var(--red-dim); }
+  .add-row-btn {
+    margin-top: 8px;
+    background: none;
+    border: 1px dashed var(--border);
+    color: var(--text-muted);
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.15s;
+  }
+  .add-row-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .body-type-select {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    outline: none;
+  }
+  .body-textarea {
+    width: 100%;
+    min-height: 130px;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    outline: none;
+    resize: vertical;
+    line-height: 1.5;
+    transition: border-color 0.15s;
+  }
+  .body-textarea:focus { border-color: var(--accent); }
+
+  .quick-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .quick-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+  }
+  .quick-btn:hover { border-color: var(--accent); background: var(--accent-dim); }
+  .quick-btn .method-badge { flex-shrink: 0; }
+
+  .method-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.3px;
+    font-family: 'SF Mono', monospace;
+  }
+  .method-GET    { color: var(--method-get);     background: #1a3a26; }
+  .method-POST   { color: var(--method-post);    background: #1f4068; }
+  .method-PUT    { color: var(--method-put);     background: #3a2c0f; }
+  .method-PATCH  { color: var(--method-patch);   background: #2a1f3d; }
+  .method-DELETE { color: var(--method-delete);  background: var(--red-dim); }
+  .method-HEAD   { color: var(--method-head);    background: #0f2a2c; }
+  .method-OPTIONS{ color: var(--method-options); background: #2c2710; }
+
+  .response-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: var(--surface3);
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .status-code {
+    font-weight: 700;
+    font-family: monospace;
+    font-size: 13px;
+  }
+  .status-1xx { color: var(--text-muted); }
+  .status-2xx { color: var(--green); }
+  .status-3xx { color: var(--yellow); }
+  .status-4xx { color: var(--orange); }
+  .status-5xx { color: var(--red); }
+  .status-time { margin-left: auto; color: var(--text-muted); }
+  .status-size { color: var(--text-muted); margin-left: 8px; }
+
+  .response-empty {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 40px 20px;
+    font-size: 13px;
+  }
+  .response-empty .big-icon { font-size: 36px; margin-bottom: 10px; opacity: 0.4; }
+
+  .json-viewer {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 12px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .json-key   { color: var(--accent); }
+  .json-str   { color: var(--green); }
+  .json-num   { color: var(--orange); }
+  .json-bool  { color: var(--purple); }
+  .json-null  { color: var(--text-muted); }
+
+  .headers-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+  .headers-table tr { border-bottom: 1px solid var(--border); }
+  .headers-table tr:last-child { border-bottom: none; }
+  .headers-table td { padding: 5px 8px; vertical-align: top; font-family: monospace; }
+  .headers-table td:first-child { color: var(--text-muted); white-space: nowrap; padding-right: 16px; }
+  .headers-table td:last-child { color: var(--text); word-break: break-all; }
+
+  .log-list { display: flex; flex-direction: column; gap: 8px; }
+  .log-item {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .log-item:hover { border-color: var(--text-muted); }
+  .log-item.expanded { border-color: var(--accent); }
+
+  .log-item-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  .log-path {
+    font-family: monospace;
+    color: var(--text);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .log-time { color: var(--text-muted); font-size: 11px; white-space: nowrap; }
+  .log-duration { color: var(--text-dim); font-size: 11px; white-space: nowrap; }
+  .log-status-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-family: monospace;
+  }
+  .badge-2xx { background: var(--green-dim); color: var(--green); }
+  .badge-3xx { background: #3a2c0f; color: var(--yellow); }
+  .badge-4xx { background: var(--red-dim); color: var(--orange); }
+  .badge-5xx { background: var(--red-dim); color: var(--red); }
+
+  .log-item-body {
+    display: none;
+    padding: 0 12px 12px;
+    font-size: 11px;
+    font-family: monospace;
+    border-top: 1px solid var(--border);
+  }
+  .log-item.expanded .log-item-body { display: block; }
+
+  .log-section { margin-top: 10px; }
+  .log-section-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .log-section-content {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 150px;
+    overflow-y: auto;
+    color: var(--text);
+    line-height: 1.5;
+    font-size: 11px;
+  }
+
+  .logs-empty {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 40px 20px;
+    font-size: 13px;
+  }
+
+  .icon-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .icon-btn:hover { border-color: var(--text-muted); color: var(--text); }
+
+  .pulse {
+    animation: pulse 0.6s ease-out;
+  }
+  @keyframes pulse {
+    0% { background: var(--accent-dim); }
+    100% { background: var(--surface3); }
+  }
+
+  .spinner {
+    width: 12px; height: 12px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .copy-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 3px;
+    transition: all 0.15s;
+    margin-left: 4px;
+  }
+  .copy-btn:hover { color: var(--text); background: var(--surface3); }
+
+  .log-new-badge {
+    background: var(--accent);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 10px;
+    animation: fadeout 2s ease-out forwards;
+  }
+  @keyframes fadeout {
+    0% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    API Tester
+  </div>
+  <div style="font-size:12px; color:var(--text-dim); margin-left:4px;">localhost demo</div>
+  <div class="ws-status">
+    <div class="ws-dot" id="wsDot"></div>
+    <span id="wsLabel">Connecting…</span>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- Panel 1: Request Builder -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="icon">🛠</span> Request Builder
+    </div>
+    <div class="panel-body">
+      <!-- URL Bar -->
+      <div class="url-bar">
+        <select class="method-select" id="methodSelect" onchange="onMethodChange()">
+          <option value="GET">GET</option>
+          <option value="POST">POST</option>
+          <option value="PUT">PUT</option>
+          <option value="PATCH">PATCH</option>
+          <option value="DELETE">DELETE</option>
+          <option value="HEAD">HEAD</option>
+          <option value="OPTIONS">OPTIONS</option>
+        </select>
+        <input class="url-input" id="urlInput" value="http://localhost:3000/api/demo" placeholder="Enter URL…" />
+        <button class="send-btn" id="sendBtn" onclick="sendRequest()">Send</button>
+      </div>
+
+      <!-- Quick endpoints -->
+      <div style="font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600;">Quick Endpoints</div>
+      <div class="quick-grid">
+        <button class="quick-btn" onclick="loadQuick('GET','http://localhost:3000/api/demo')">
+          <span class="method-badge method-GET">GET</span>/api/demo
+        </button>
+        <button class="quick-btn" onclick="loadQuick('GET','http://localhost:3000/api/demo/42')">
+          <span class="method-badge method-GET">GET</span>/api/demo/:id
+        </button>
+        <button class="quick-btn" onclick="loadQuick('POST','http://localhost:3000/api/demo')">
+          <span class="method-badge method-POST">POST</span>/api/demo
+        </button>
+        <button class="quick-btn" onclick="loadQuick('PUT','http://localhost:3000/api/demo/42')">
+          <span class="method-badge method-PUT">PUT</span>/api/demo/:id
+        </button>
+        <button class="quick-btn" onclick="loadQuick('PATCH','http://localhost:3000/api/demo/42')">
+          <span class="method-badge method-PATCH">PATCH</span>/api/demo/:id
+        </button>
+        <button class="quick-btn" onclick="loadQuick('DELETE','http://localhost:3000/api/demo/42')">
+          <span class="method-badge method-DELETE">DELETE</span>/api/demo/:id
+        </button>
+        <button class="quick-btn" onclick="loadQuick('GET','http://localhost:3000/api/echo')">
+          <span class="method-badge method-GET">GET</span>/api/echo
+        </button>
+        <button class="quick-btn" onclick="loadQuick('GET','http://localhost:3000/api/status/404')">
+          <span class="method-badge method-GET">GET</span>/api/status/:code
+        </button>
+        <button class="quick-btn" onclick="loadQuick('GET','http://localhost:3000/api/delay/1000')">
+          <span class="method-badge method-GET">GET</span>/api/delay/:ms
+        </button>
+        <button class="quick-btn" onclick="loadQuick('HEAD','http://localhost:3000/api/demo')">
+          <span class="method-badge method-HEAD">HEAD</span>/api/demo
+        </button>
+        <button class="quick-btn" onclick="loadQuick('OPTIONS','http://localhost:3000/api/demo')">
+          <span class="method-badge method-OPTIONS">OPT</span>/api/demo
+        </button>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <div class="tab active" onclick="switchReqTab(this,'params')">Params <span class="tab-count" id="paramsCount">0</span></div>
+        <div class="tab" onclick="switchReqTab(this,'headers')">Headers <span class="tab-count" id="headersCount">0</span></div>
+        <div class="tab" onclick="switchReqTab(this,'body')" id="bodyTab">Body</div>
+        <div class="tab" onclick="switchReqTab(this,'auth')">Auth</div>
+      </div>
+
+      <!-- Params -->
+      <div class="tab-content active" id="req-params">
+        <table class="kv-table">
+          <thead><tr><th></th><th>Key</th><th>Value</th><th></th></tr></thead>
+          <tbody id="paramsBody"></tbody>
+        </table>
+        <button class="add-row-btn" onclick="addKvRow('paramsBody','params')">+ Add parameter</button>
+      </div>
+
+      <!-- Headers -->
+      <div class="tab-content" id="req-headers">
+        <table class="kv-table">
+          <thead><tr><th></th><th>Key</th><th>Value</th><th></th></tr></thead>
+          <tbody id="headersBody"></tbody>
+        </table>
+        <button class="add-row-btn" onclick="addKvRow('headersBody','headers')">+ Add header</button>
+      </div>
+
+      <!-- Body -->
+      <div class="tab-content" id="req-body">
+        <select class="body-type-select" id="bodyType" onchange="onBodyTypeChange()">
+          <option value="json">JSON</option>
+          <option value="form">Form (x-www-form-urlencoded)</option>
+          <option value="text">Plain text</option>
+          <option value="none">None</option>
+        </select>
+        <div id="bodyJsonArea">
+          <textarea class="body-textarea" id="bodyJson" placeholder='{\n  "key": "value"\n}'></textarea>
+        </div>
+        <div id="bodyFormArea" style="display:none">
+          <table class="kv-table">
+            <thead><tr><th></th><th>Key</th><th>Value</th><th></th></tr></thead>
+            <tbody id="formBody"></tbody>
+          </table>
+          <button class="add-row-btn" onclick="addKvRow('formBody','form')">+ Add field</button>
+        </div>
+        <div id="bodyTextArea" style="display:none">
+          <textarea class="body-textarea" id="bodyText" placeholder="Plain text body…"></textarea>
+        </div>
+      </div>
+
+      <!-- Auth -->
+      <div class="tab-content" id="req-auth">
+        <select class="body-type-select" id="authType" onchange="onAuthTypeChange()">
+          <option value="none">No Auth</option>
+          <option value="bearer">Bearer Token</option>
+          <option value="basic">Basic Auth</option>
+          <option value="apikey">API Key</option>
+        </select>
+        <div id="authBearer" style="display:none">
+          <input class="kv-input" id="bearerToken" placeholder="Token…" style="width:100%">
+        </div>
+        <div id="authBasic" style="display:none">
+          <input class="kv-input" id="basicUser" placeholder="Username">
+          <input class="kv-input" id="basicPass" placeholder="Password" type="password">
+        </div>
+        <div id="authApiKey" style="display:none">
+          <input class="kv-input" id="apiKeyName" placeholder="Header name (e.g. X-API-Key)">
+          <input class="kv-input" id="apiKeyVal" placeholder="Value">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel 2: Response -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="icon">📥</span> Response
+      <div class="panel-header-actions" id="responseMeta" style="display:none">
+        <button class="icon-btn" onclick="copyResponse()">📋 Copy</button>
+      </div>
+    </div>
+    <div class="panel-body" id="responsePanel">
+      <div class="response-empty">
+        <div class="big-icon">🌐</div>
+        <div>Send a request to see the response</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel 3: Live Request Log -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="icon">📡</span> Live Request Log
+      <div id="logCountBadge" style="background:var(--surface3);color:var(--text-muted);font-size:10px;padding:1px 6px;border-radius:10px;font-weight:700;">0</div>
+      <div class="panel-header-actions">
+        <button class="icon-btn" onclick="clearLogs()">🗑 Clear</button>
+      </div>
+    </div>
+    <div class="panel-body" id="liveLogPanel">
+      <div class="logs-empty" id="logsEmpty">
+        <div style="font-size:28px;margin-bottom:8px;opacity:0.4;">📭</div>
+        Waiting for requests…<br>
+        <span style="font-size:11px;color:var(--text-dim)">All /api/* traffic appears here in real time</span>
+      </div>
+      <div class="log-list" id="logList"></div>
+    </div>
+  </div>
+
+  <!-- Panel 4: Log Detail / Stats -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="icon">📊</span> Log Detail
+    </div>
+    <div class="panel-body" id="logDetailPanel">
+      <div class="logs-empty">
+        <div style="font-size:28px;margin-bottom:8px;opacity:0.4;">🔍</div>
+        Click a log entry to inspect it
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let logs = [];
+let activeLogId = null;
+let lastResponse = null;
+
+// ── WebSocket ──────────────────────────────────────────────────────────────
+let ws;
+function connectWS() {
+  ws = new WebSocket(`ws://${location.host}/ws-logs`);
+  ws.onopen = () => {
+    document.getElementById('wsDot').classList.add('connected');
+    document.getElementById('wsLabel').textContent = 'Live';
+  };
+  ws.onclose = () => {
+    document.getElementById('wsDot').classList.remove('connected');
+    document.getElementById('wsLabel').textContent = 'Disconnected';
+    setTimeout(connectWS, 2000);
+  };
+  ws.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    if (data.type === 'request') appendLog(data.log);
+    else if (data.type === 'clear') { logs = []; renderLogs(); }
+  };
+}
+connectWS();
+
+// ── KV Row management ──────────────────────────────────────────────────────
+function addKvRow(tbodyId, type, key='', val='', enabled=true) {
+  const tbody = document.getElementById(tbodyId);
+  const tr = document.createElement('tr');
+  tr.className = 'kv-row';
+  tr.innerHTML = `
+    <td><input type="checkbox" class="kv-check" ${enabled?'checked':''} onchange="updateCount('${type}')"></td>
+    <td><input class="kv-input" placeholder="Key" value="${esc(key)}" oninput="updateCount('${type}')"></td>
+    <td><input class="kv-input" placeholder="Value" value="${esc(val)}"></td>
+    <td><button class="kv-del" onclick="this.closest('tr').remove();updateCount('${type}')">×</button></td>`;
+  tbody.appendChild(tr);
+  updateCount(type);
+}
+
+function esc(s) { return String(s).replace(/"/g,'&quot;'); }
+
+function getKvRows(tbodyId) {
+  const rows = [];
+  document.querySelectorAll(`#${tbodyId} tr.kv-row`).forEach(tr => {
+    const inputs = tr.querySelectorAll('input.kv-input');
+    const enabled = tr.querySelector('.kv-check')?.checked;
+    if (enabled && inputs[0].value.trim()) {
+      rows.push({ key: inputs[0].value.trim(), value: inputs[1].value });
+    }
+  });
+  return rows;
+}
+
+function updateCount(type) {
+  const map = { params: ['paramsBody','paramsCount'], headers: ['headersBody','headersCount'] };
+  if (!map[type]) return;
+  const count = getKvRows(map[type][0]).length;
+  document.getElementById(map[type][1]).textContent = count || '0';
+}
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+function switchReqTab(el, name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('req-' + name).classList.add('active');
+}
+
+// ── Method change ──────────────────────────────────────────────────────────
+function onMethodChange() {
+  const m = document.getElementById('methodSelect').value;
+  const bodyTab = document.getElementById('bodyTab');
+  const noBody = ['GET','HEAD','OPTIONS'];
+  bodyTab.style.opacity = noBody.includes(m) ? '0.4' : '1';
+}
+
+// ── Body type ──────────────────────────────────────────────────────────────
+function onBodyTypeChange() {
+  const t = document.getElementById('bodyType').value;
+  document.getElementById('bodyJsonArea').style.display = t==='json' ? '' : 'none';
+  document.getElementById('bodyFormArea').style.display = t==='form' ? '' : 'none';
+  document.getElementById('bodyTextArea').style.display = t==='text' ? '' : 'none';
+}
+
+// ── Auth ───────────────────────────────────────────────────────────────────
+function onAuthTypeChange() {
+  const t = document.getElementById('authType').value;
+  document.getElementById('authBearer').style.display = t==='bearer' ? '' : 'none';
+  document.getElementById('authBasic').style.display  = t==='basic'  ? 'flex' : 'none';
+  document.getElementById('authApiKey').style.display = t==='apikey' ? 'flex' : 'none';
+}
+
+// ── Quick load ─────────────────────────────────────────────────────────────
+function loadQuick(method, url) {
+  document.getElementById('methodSelect').value = method;
+  document.getElementById('urlInput').value = url;
+  onMethodChange();
+  // Pre-fill body for POST/PUT/PATCH
+  if (['POST','PUT','PATCH'].includes(method)) {
+    document.getElementById('bodyJson').value = JSON.stringify({ name: "John", value: 42 }, null, 2);
+    document.getElementById('bodyType').value = 'json';
+    onBodyTypeChange();
+  }
+}
+
+// ── Send request ───────────────────────────────────────────────────────────
+async function sendRequest() {
+  const method = document.getElementById('methodSelect').value;
+  let url = document.getElementById('urlInput').value.trim();
+  const btn = document.getElementById('sendBtn');
+
+  // Build query params
+  const params = getKvRows('paramsBody');
+  if (params.length) {
+    const qs = new URLSearchParams(params.map(p=>[p.key, p.value]));
+    url += (url.includes('?') ? '&' : '?') + qs.toString();
+  }
+
+  // Build headers
+  const headers = {};
+  getKvRows('headersBody').forEach(h => headers[h.key] = h.value);
+
+  // Auth
+  const authType = document.getElementById('authType').value;
+  if (authType === 'bearer') {
+    headers['Authorization'] = 'Bearer ' + document.getElementById('bearerToken').value;
+  } else if (authType === 'basic') {
+    headers['Authorization'] = 'Basic ' + btoa(
+      document.getElementById('basicUser').value + ':' + document.getElementById('basicPass').value
+    );
+  } else if (authType === 'apikey') {
+    const name = document.getElementById('apiKeyName').value || 'X-API-Key';
+    headers[name] = document.getElementById('apiKeyVal').value;
+  }
+
+  // Body
+  let body = undefined;
+  if (!['GET','HEAD'].includes(method)) {
+    const bodyType = document.getElementById('bodyType').value;
+    if (bodyType === 'json') {
+      const raw = document.getElementById('bodyJson').value.trim();
+      if (raw) { headers['Content-Type'] = 'application/json'; body = raw; }
+    } else if (bodyType === 'form') {
+      const fd = getKvRows('formBody');
+      if (fd.length) {
+        headers['Content-Type'] = 'application/x-www-form-urlencoded';
+        body = new URLSearchParams(fd.map(f=>[f.key,f.value])).toString();
+      }
+    } else if (bodyType === 'text') {
+      const t = document.getElementById('bodyText').value;
+      if (t) { headers['Content-Type'] = 'text/plain'; body = t; }
+    }
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  showLoadingResponse();
+
+  const start = Date.now();
+  try {
+    const res = await fetch(url, { method, headers, body });
+    const duration = Date.now() - start;
+    const resHeaders = {};
+    res.headers.forEach((v,k) => resHeaders[k] = v);
+    let resBody;
+    const ct = res.headers.get('content-type') || '';
+    const text = await res.text();
+    try { resBody = JSON.parse(text); } catch { resBody = text; }
+    lastResponse = { status: res.status, statusText: res.statusText, headers: resHeaders, body: resBody, duration };
+    renderResponse(lastResponse);
+  } catch (err) {
+    renderError(err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send';
+  }
+}
+
+function showLoadingResponse() {
+  document.getElementById('responsePanel').innerHTML = `
+    <div class="response-empty"><span class="spinner" style="width:24px;height:24px;border-width:3px"></span><br><br>Sending…</div>`;
+  document.getElementById('responseMeta').style.display = 'none';
+}
+
+function renderResponse(r) {
+  const statusClass = `status-${Math.floor(r.status/100)}xx`;
+  const sizeBytes = JSON.stringify(r.body || '').length;
+  const sizeStr = sizeBytes > 1024 ? (sizeBytes/1024).toFixed(1)+' KB' : sizeBytes+' B';
+
+  let bodyHtml;
+  if (typeof r.body === 'object' && r.body !== null) {
+    bodyHtml = syntaxHighlight(JSON.stringify(r.body, null, 2));
+  } else {
+    bodyHtml = String(r.body || '(empty)');
+  }
+
+  const headersHtml = Object.entries(r.headers).map(([k,v]) =>
+    `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+
+  document.getElementById('responsePanel').innerHTML = `
+    <div class="response-status-bar">
+      <div class="status-code ${statusClass}">${r.status} ${r.statusText}</div>
+      <div class="status-time">⏱ ${r.duration}ms</div>
+      <div class="status-size">📦 ${sizeStr}</div>
+    </div>
+    <div class="tabs" id="resTabs">
+      <div class="tab active" onclick="switchResTab(this,'res-body')">Body</div>
+      <div class="tab" onclick="switchResTab(this,'res-headers')">Headers</div>
+    </div>
+    <div class="tab-content active" id="res-body">
+      <div class="json-viewer">${bodyHtml}</div>
+    </div>
+    <div class="tab-content" id="res-headers">
+      <table class="headers-table">${headersHtml}</table>
+    </div>`;
+
+  document.getElementById('responseMeta').style.display = 'flex';
+}
+
+function renderError(msg) {
+  document.getElementById('responsePanel').innerHTML = `
+    <div class="response-status-bar">
+      <div class="status-code status-5xx">Error</div>
+    </div>
+    <div class="json-viewer" style="color:var(--red)">${msg}</div>`;
+}
+
+function switchResTab(el, id) {
+  el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('res-body').classList.remove('active');
+  document.getElementById('res-headers').classList.remove('active');
+  document.getElementById(id).classList.add('active');
+}
+
+function copyResponse() {
+  if (!lastResponse) return;
+  navigator.clipboard.writeText(JSON.stringify(lastResponse.body, null, 2));
+}
+
+// ── Syntax highlight ───────────────────────────────────────────────────────
+function syntaxHighlight(json) {
+  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, (match) => {
+    let cls = 'json-num';
+    if (/^"/.test(match)) cls = /:$/.test(match) ? 'json-key' : 'json-str';
+    else if (/true|false/.test(match)) cls = 'json-bool';
+    else if (/null/.test(match)) cls = 'json-null';
+    return `<span class="${cls}">${match}</span>`;
+  });
+}
+
+// ── Live Logs ──────────────────────────────────────────────────────────────
+function appendLog(log) {
+  logs.unshift(log);
+  document.getElementById('logsEmpty').style.display = 'none';
+  document.getElementById('logCountBadge').textContent = logs.length;
+
+  const list = document.getElementById('logList');
+  const item = buildLogItem(log, true);
+  list.insertBefore(item, list.firstChild);
+
+  // Limit displayed
+  while (list.children.length > 100) list.removeChild(list.lastChild);
+}
+
+function renderLogs() {
+  const list = document.getElementById('logList');
+  list.innerHTML = '';
+  document.getElementById('logCountBadge').textContent = logs.length;
+  document.getElementById('logsEmpty').style.display = logs.length ? 'none' : '';
+  logs.forEach(log => list.appendChild(buildLogItem(log, false)));
+}
+
+function buildLogItem(log, isNew) {
+  const el = document.createElement('div');
+  el.className = 'log-item' + (isNew ? ' pulse' : '');
+  el.id = 'log-' + log.id;
+
+  const sc = log.statusCode;
+  const badgeClass = sc >= 500 ? 'badge-5xx' : sc >= 400 ? 'badge-4xx' : sc >= 300 ? 'badge-3xx' : 'badge-2xx';
+  const time = new Date(log.timestamp).toLocaleTimeString();
+
+  const hasBody = log.body && Object.keys(log.body).length > 0;
+  const hasQuery = log.query && Object.keys(log.query).length > 0;
+
+  el.innerHTML = `
+    <div class="log-item-header" onclick="toggleLog('${log.id}')">
+      <span class="method-badge method-${log.method}">${log.method}</span>
+      <span class="log-path">${log.path}</span>
+      <span class="log-status-badge ${badgeClass}">${sc}</span>
+      <span class="log-duration">${log.duration}ms</span>
+      <span class="log-time">${time}</span>
+      ${isNew ? '<span class="log-new-badge">NEW</span>' : ''}
+    </div>
+    <div class="log-item-body" id="logbody-${log.id}">
+      ${hasQuery ? `<div class="log-section"><div class="log-section-title">Query Params</div><div class="log-section-content">${JSON.stringify(log.query,null,2)}</div></div>` : ''}
+      ${hasBody ? `<div class="log-section"><div class="log-section-title">Request Body</div><div class="log-section-content">${JSON.stringify(log.body,null,2)}</div></div>` : ''}
+      <div class="log-section"><div class="log-section-title">Response</div><div class="log-section-content">${JSON.stringify(log.responseBody,null,2)}</div></div>
+    </div>`;
+
+  el.querySelector('.log-item-header').addEventListener('click', () => {
+    showLogDetail(log);
+  });
+  return el;
+}
+
+function toggleLog(id) {
+  const el = document.getElementById('log-'+id);
+  el.classList.toggle('expanded');
+}
+
+function showLogDetail(log) {
+  document.querySelectorAll('.log-item').forEach(e => e.classList.remove('expanded'));
+  document.getElementById('log-'+log.id)?.classList.add('expanded');
+
+  const sc = log.statusCode;
+  const badgeClass = sc >= 500 ? 'badge-5xx' : sc >= 400 ? 'badge-4xx' : sc >= 300 ? 'badge-3xx' : 'badge-2xx';
+
+  const sections = [
+    ['Method & Path', `${log.method} ${log.path}`],
+    ['Status', `<span class="log-status-badge ${badgeClass}">${sc}</span> &nbsp; <span style="color:var(--text-muted)">Duration: ${log.duration}ms</span>`],
+    ['Timestamp', log.timestamp],
+    ['Request Headers', JSON.stringify(log.headers, null, 2)],
+    ...(Object.keys(log.query||{}).length ? [['Query Params', JSON.stringify(log.query, null, 2)]] : []),
+    ...(Object.keys(log.params||{}).length ? [['Route Params', JSON.stringify(log.params, null, 2)]] : []),
+    ...(log.body && Object.keys(log.body).length ? [['Request Body', JSON.stringify(log.body, null, 2)]] : []),
+    ['Response Body', JSON.stringify(log.responseBody, null, 2)],
+  ];
+
+  document.getElementById('logDetailPanel').innerHTML = sections.map(([title, content]) => `
+    <div class="log-section">
+      <div class="log-section-title">${title}</div>
+      <div class="log-section-content">${content}</div>
+    </div>`).join('');
+}
+
+function clearLogs() {
+  fetch('/api/__clear-logs', { method: 'POST' });
+  logs = [];
+  renderLogs();
+  document.getElementById('logDetailPanel').innerHTML = `
+    <div class="logs-empty"><div style="font-size:28px;margin-bottom:8px;opacity:0.4;">🔍</div>Click a log entry to inspect it</div>`;
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+addKvRow('paramsBody','params');
+addKvRow('headersBody','headers','Content-Type','application/json');
+addKvRow('formBody','form');
+document.getElementById('bodyJson').value = '{\n  "name": "John",\n  "value": 42\n}';
+onMethodChange();
+</script>
+</body>
+</html>
